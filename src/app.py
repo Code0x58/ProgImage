@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # TODO: route traffic with v1 path prefix
+import io
 import uuid
 
 from flask import Flask, Response, abort, request
+from PIL import Image
 
 from . import storage
 
@@ -27,6 +29,24 @@ def storage_get(key):
         return Response(store.get(key), mimetype="image")
     except storage.ObjectNotFound:
         abort(404)
+
+
+@app.route("/storage/<uuid:key>.<string:extension>", methods=("GET",))
+def storage_get_transform(key, extension):
+    extension = extension.lower()
+    try:
+        bytes_in = store.get(key)
+    except storage.ObjectNotFound:
+        abort(404)
+
+    image = Image.open(io.BytesIO(bytes_in))
+    bytes_out = io.BytesIO()
+    try:
+        # pillow raises a KeyError if the format is not known
+        image.save(bytes_out, extension)
+    except KeyError:
+        abort(f"invalid extension type {extension!r}")
+    return Response(bytes_out.getvalue(), mimetype=f"image/{extension}")
 
 
 if __name__ == "__main__":
