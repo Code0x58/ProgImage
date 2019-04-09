@@ -21,11 +21,11 @@ class StorageBackend(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def put(self, key: str, data: bytes) -> None:
-        return None
+        return None  # pragma: nocover
 
     @abc.abstractmethod
     def get(self, key: str) -> bytes:
-        return b""
+        return b""  # pragma: nocover
 
 
 class InMemoryStorage(StorageBackend):

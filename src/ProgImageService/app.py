@@ -18,7 +18,7 @@ def storage_put():
     key = uuid.uuid4()
     data = request.files.get("data")
     if data is None:
-        abort(Response("data not provided"))
+        abort(400, Response("data not provided"))
     store.put(key, data.stream.read())
     return Response(str(key))
 
@@ -45,9 +45,5 @@ def storage_get_transform(key, extension):
         # pillow raises a KeyError if the format is not known
         image.save(bytes_out, extension)
     except KeyError:
-        abort(f"invalid extension type {extension!r}")
+        abort(400, f"invalid extension type {extension!r}")
     return Response(bytes_out.getvalue(), mimetype=f"image/{extension}")
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
