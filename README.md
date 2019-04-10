@@ -37,10 +37,12 @@ image/x-ms-bmp
 
 
 ## Running
+
+### Local
 Requirements:
 
- * [`pipenv`](https://github.com/pypa/pipenv)
- * Python3 (tested on python3.7)
+* Python3 (tested on python3.7)
+* [`pipenv`](https://github.com/pypa/pipenv)
 
 From the repo base run:
 
@@ -61,5 +63,45 @@ pipenv run pytest
 
 The tests suite will also produce a coverage report under `./reports/coverage/index.html`.
 
-## Note
-Given the broad problem description, a service like [imaginary](https://github.com/h2non/imaginary) would probably be a part of a good solution.
+## Questions
+Some non-exhaustive responses to the questions:
+
+### What language platform did you select to implement the microservice? Why?
+Python3 on Linux/POSIX operating systems, possibly any Python3 supported OS (limited by dependencies).
+ * a language mutually familiar with
+ * a good environment to rapidly develop in
+
+### How did you store the uploaded images?
+In memory using a simple put/get interface which should be easy to extend with additional backends. This allows easy testing, and leaves the details/discussion on backends open.
+
+### What would you do differently to your implementation
+Given the broad bigger problem description, I would probably look at using a service like [imaginary](https://github.com/h2non/imaginary) as it already implements a lot of features, appears to have a decent community, and is written in go.
+
+With a specific list of supported formats, and more information on use along with demands and available resources, it may be reasonable to pre-compute the different image formats and serve them via a CDN.
+
+### How would coordinate your development environment to handle the build and test process?
+I have linters integrated with my editor, so get feedback as I save changes. Running the tests locally is a single line straightforward line so I would probably run the commands by hand, but I would add a CI pipeline to GitHub (GitHub actions are really nice) so that my commits are always tested, even if not locally.
+
+### What technologies would you use to ease the task of deploying the microservices to a production runtime environment?
+If it was available, I would use a tool like Flux or Argo-CD to deploy manifests to Kubernetes custer(s) when an image/manifest repository is updated. When the CI/CD of the images is separate, it allows good disaster recovery when there are cluster issues (including a new cluster).
+
+Testing as a part of CI/CD could occur within a container, against the container, against manifests, and against releases (e.g. through canary releases).
+
+### What testing did (or would) you do, and why?
+I started off with doctests for the in-memory backend as they are just documentation. I then did manual testing on the API, and did the rest of the automated testing for the 3rd task.
+
+I would be tempted to add `mypy` to do type checking if the service was getting larger.
+
+### What is the scaling capability of your solution? At what point would you need to change the architecture and why?
+The current solution sould scale vertically and horizontally - the core code is pretty flexible and doesn't depend on locks/syncing. The code speed, backend choice, and deployment (e.g using horizontal pod autoscaling or kubeless' lambdas, multi-cluster ingress) would probably be parts to focus on for scaling. I imagine that the lifecycle of images may need considering, e.g. for their retention and target durability.
+
+### What scenarios can you foresee where your solution can be misused? How would you protect your solution against such situations?
+Given the lack of limitation, it could be used to store any content and serve it anyway, so very easy to abuse. If misuse would be a problem, auditing and limiting use (e.g. via authentication) could be options.
+
+### What are the potential attack vectors on your solution and how would you protect your solution against them?
+ * oversized image files - put a limit on upload sizes
+ * invalid image uploads which would cause failures during the transform operation - validate the image on upload
+ * payloads intended on exploiting the underlying libraries, e.g. pillow (C?) - keep libraries up to date and scan for issues + minimise access + have disaster recovery plan for data
+ * DoS by saturating serving potential - offload concerns to a CDN
+ * incurring excessive cost/saturating storage potential - audit and limit access to uploads
+ * uploads of pathological images e.g. absurd in-memory dimensions which can be a small file due to compression - place checks on uploads
